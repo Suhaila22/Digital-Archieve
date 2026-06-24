@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>نظام الأرشفة الرقمية — جيمستون</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#16273D; --navy2:#1F3A5F; --blue:#2E6FB0; --blue-soft:#DCE8F5;
+  --gold:#C9A227; --gold-soft:#F5EEDA; --bg:#EEF2F7; --card:#FFFFFF;
+  --ink:#16273D; --muted:#5A6470; --line:#DCE3EC;
+  --ok:#2E7D54; --warn:#C9A227; --hot:#B23A48;
+  --r:14px; --sh:0 6px 22px rgba(22,39,61,.08); --sh2:0 2px 8px rgba(22,39,61,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Tajawal','Segoe UI',Tahoma,sans-serif; background:var(--bg); color:var(--ink);
+  font-size:15px; line-height:1.7; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.disp{font-family:'Cairo','Segoe UI',sans-serif}
+button{font-family:inherit;cursor:pointer;border:none;background:none}
+select,input{font-family:inherit;font-size:14px}
+.app{display:flex;flex-direction:column;min-height:100vh}
+
+/* ===== top bar ===== */
+.top{
+  background:linear-gradient(110deg,var(--navy) 0%,var(--navy2) 70%,#27496e 100%);
+  color:#fff;padding:14px 26px;display:flex;align-items:center;gap:16px;
+  box-shadow:0 3px 14px rgba(22,39,61,.18);position:sticky;top:0;z-index:40;border-bottom:3px solid var(--gold);
+}
+.logo{width:40px;height:44px;flex:0 0 auto}
+.brand{display:flex;flex-direction:column;line-height:1.25}
+.brand b{font-family:'Cairo';font-weight:900;font-size:19px;letter-spacing:.2px}
+.brand span{font-size:12px;color:#cdd9e8}
+.top .grow{flex:1}
+.kpis{display:flex;gap:22px}
+.kpi{text-align:center}
+.kpi b{font-family:'Cairo';font-weight:900;font-size:20px;color:var(--gold);display:block}
+.kpi span{font-size:11px;color:#cdd9e8}
+@media(max-width:720px){.kpis{display:none}}
+
+/* ===== layout ===== */
+.body{display:flex;flex:1;min-height:0}
+.rail{
+  width:210px;flex:0 0 auto;background:var(--card);border-inline-start:1px solid var(--line);
+  padding:18px 12px;display:flex;flex-direction:column;gap:4px;position:sticky;top:74px;align-self:flex-start;height:calc(100vh - 74px);
+}
+.rail .grp{font-size:11px;color:var(--muted);padding:10px 12px 4px;font-weight:700;letter-spacing:.4px}
+.tab{
+  display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:11px;color:var(--navy);
+  font-weight:700;font-size:14.5px;transition:.16s;white-space:nowrap;width:100%;text-align:start;
+}
+.tab .ic{width:20px;height:20px;flex:0 0 auto;opacity:.85}
+.tab:hover{background:var(--blue-soft)}
+.tab.on{background:var(--navy);color:#fff}
+.tab.on .ic{opacity:1}
+.tab .cnt{margin-inline-start:auto;background:var(--gold-soft);color:#7a611a;font-size:11px;font-weight:800;padding:1px 8px;border-radius:20px}
+.tab.on .cnt{background:rgba(255,255,255,.22);color:#fff}
+.main{flex:1;min-width:0;padding:26px 30px;overflow-x:hidden}
+@media(max-width:720px){
+  .body{flex-direction:column}
+  .rail{width:auto;flex-direction:row;overflow-x:auto;height:auto;position:static;border-inline-start:none;border-bottom:1px solid var(--line);gap:6px}
+  .rail .grp{display:none}.tab .cnt{display:none}
+  .main{padding:18px 16px}
+}
+
+.pageHead{margin-bottom:18px}
+.pageHead h2{font-size:23px;font-weight:900;color:var(--navy)}
+.pageHead p{color:var(--muted);font-size:14px;margin-top:2px}
+.view{display:none;animation:fade .3s ease}
+.view.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh2)}
+.btn{
+  background:var(--blue);color:#fff;padding:10px 18px;border-radius:11px;font-weight:700;font-size:14.5px;
+  display:inline-flex;align-items:center;gap:8px;transition:.16s;box-shadow:0 3px 10px rgba(46,111,176,.25)
+}
+.btn:hover{background:#255e98;transform:translateY(-1px)}
+.btn.gold{background:var(--gold);box-shadow:0 3px 10px rgba(201,162,39,.3);color:#3a2f08}
+.btn.gold:hover{background:#b6911f}
+.btn.ghost{background:transparent;color:var(--navy);border:1.5px solid var(--line);box-shadow:none}
+.btn.ghost:hover{border-color:var(--blue);background:var(--blue-soft)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+
+/* ===== ingest ===== */
+.drop{
+  border:2.5px dashed #b8c6d8;border-radius:18px;background:linear-gradient(180deg,#fff,#f7fafe);
+  padding:40px 24px;text-align:center;transition:.2s;cursor:pointer;
+}
+.drop.hot{border-color:var(--gold);background:var(--gold-soft);transform:scale(1.005)}
+.drop .big{font-family:'Cairo';font-weight:900;font-size:21px;color:var(--navy);margin-bottom:6px}
+.drop .sub{color:var(--muted);font-size:14px;margin-bottom:18px}
+.drop .gem{width:54px;height:58px;margin:0 auto 14px;display:block}
+.row-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+.pending{margin-top:22px;display:none}
+.pending.on{display:block}
+.pbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px}
+.pbar h3{font-size:16px;font-weight:800;color:var(--navy)}
+
+.frec{
+  background:var(--card);border:1px solid var(--line);border-radius:13px;padding:14px 16px;margin-bottom:11px;
+  display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:center;box-shadow:var(--sh2);
+  animation:slidein .4s ease backwards;border-inline-start:5px solid var(--catc,var(--line));
+}
+@keyframes slidein{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+.ficon{width:42px;height:42px;border-radius:10px;display:grid;place-items:center;background:var(--blue-soft);color:var(--blue);font-weight:800;font-size:11px;font-family:'Cairo'}
+.fmeta{min-width:0}
+.fname{font-weight:700;color:var(--navy);font-size:15px;word-break:break-word}
+.fsub{font-size:12.5px;color:var(--muted);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:11.5px;font-weight:700;background:var(--gold-soft);color:#7a611a}
+.chip.kw{background:#eef3f9;color:#3f6488}
+.chip.man{background:#e8f3ec;color:var(--ok)}
+.fclass{display:flex;flex-direction:column;gap:7px;align-items:flex-start;min-width:182px}
+.catpick{display:flex;align-items:center;gap:7px}
+.catdot{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+.catpick select{border:1.5px solid var(--line);border-radius:9px;padding:6px 8px;color:var(--navy);font-weight:700;background:#fff;max-width:170px}
+.conf{display:flex;align-items:center;gap:8px;width:100%}
+.conf .track{flex:1;height:6px;border-radius:6px;background:#e7edf4;overflow:hidden}
+.conf .fill{height:100%;border-radius:6px;background:linear-gradient(90deg,var(--blue),var(--gold));transition:width .6s ease}
+.conf small{font-size:11px;color:var(--muted);font-weight:700;min-width:30px}
+.ret{font-size:12px;color:var(--muted)}
+.ret b{color:var(--navy)}
+@media(max-width:680px){.frec{grid-template-columns:auto 1fr}.fclass{grid-column:1/-1;min-width:0}}
+
+/* ===== archive ===== */
+.split{display:grid;grid-template-columns:260px 1fr;gap:18px}
+@media(max-width:820px){.split{grid-template-columns:1fr}}
+.tree{padding:14px}
+.tree h3{font-size:13px;color:var(--muted);font-weight:800;margin-bottom:8px;padding-inline-start:4px}
+.tnode{padding:7px 10px;border-radius:9px;font-size:14px;font-weight:700;color:var(--navy);cursor:pointer;display:flex;align-items:center;gap:8px;transition:.14s}
+.tnode:hover{background:var(--blue-soft)}
+.tnode.on{background:var(--navy);color:#fff}
+.tnode .n{margin-inline-start:auto;font-size:11px;background:var(--gold-soft);color:#7a611a;padding:0 7px;border-radius:14px;font-weight:800}
+.tnode.on .n{background:rgba(255,255,255,.2);color:#fff}
+.tser{padding-inline-start:18px}
+.tser .tnode{font-weight:500;font-size:13px}
+
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{background:var(--navy);color:#fff;font-size:12.5px;font-weight:700;padding:11px 12px;text-align:start;position:sticky;top:0}
+.tbl th:first-child{border-start-start-radius:var(--r)}
+.tbl th:last-child{border-start-end-radius:var(--r)}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--line);font-size:13.5px;vertical-align:middle}
+.tbl tr:hover td{background:#f6f9fc;cursor:pointer}
+.tbl .id{font-family:'Cairo';font-weight:700;color:var(--blue);font-size:12px;white-space:nowrap}
+.catbadge{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;padding:3px 10px;border-radius:20px}
+.sens{font-size:11px;font-weight:800;padding:2px 8px;border-radius:14px}
+.sens.s0{background:#eef3f9;color:#3f6488}.sens.s1{background:var(--gold-soft);color:#7a611a}.sens.s2{background:#f6e3e6;color:var(--hot)}
+.empty{text-align:center;padding:50px 20px;color:var(--muted)}
+.empty .gem{width:50px;height:54px;margin:0 auto 12px;opacity:.5}
+
+/* ===== drawer ===== */
+.scrim{position:fixed;inset:0;background:rgba(22,39,61,.45);opacity:0;pointer-events:none;transition:.25s;z-index:60}
+.scrim.on{opacity:1;pointer-events:auto}
+.drawer{
+  position:fixed;inset-block:0;inset-inline-start:0;width:420px;max-width:92vw;background:var(--card);z-index:61;
+  transform:translateX(-105%);transition:.28s cubic-bezier(.4,0,.2,1);box-shadow:6px 0 30px rgba(0,0,0,.2);
+  display:flex;flex-direction:column;
+}
+[dir=rtl] .drawer{transform:translateX(105%)}
+.drawer.on{transform:none!important}
+.dhead{background:var(--navy);color:#fff;padding:18px 20px;border-bottom:3px solid var(--gold)}
+.dhead .id{color:var(--gold);font-family:'Cairo';font-weight:700;font-size:12px}
+.dhead h3{font-size:17px;font-weight:800;margin-top:3px;word-break:break-word}
+.dhead .x{position:absolute;inset-block-start:16px;inset-inline-end:16px;color:#fff;font-size:22px;opacity:.8;width:30px;height:30px;border-radius:8px}
+.dhead .x:hover{background:rgba(255,255,255,.15)}
+.dbody{padding:18px 20px;overflow-y:auto;flex:1}
+.dsec{font-size:12px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;margin:16px 0 8px}
+.dsec:first-child{margin-top:0}
+.field{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13.5px}
+.field .k{color:var(--muted);font-weight:600;flex:0 0 auto}
+.field .v{color:var(--navy);font-weight:700;text-align:end;word-break:break-word}
+.dactions{padding:14px 20px;border-top:1px solid var(--line);display:flex;gap:10px}
+
+/* ===== search ===== */
+.searchbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+.searchbar input[type=text]{flex:1;min-width:200px;border:1.5px solid var(--line);border-radius:12px;padding:11px 16px;font-size:15px}
+.searchbar input:focus{outline:none;border-color:var(--blue)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.filters select{border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;color:var(--navy);font-weight:700;background:#fff}
+
+/* ===== dashboard ===== */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:20px}
+.stat{padding:18px;border-radius:var(--r);background:var(--card);border:1px solid var(--line);box-shadow:var(--sh2);position:relative;overflow:hidden}
+.stat::after{content:"";position:absolute;inset-block-start:0;inset-inline-end:0;width:60px;height:60px;background:var(--gold-soft);border-radius:0 0 0 60px;opacity:.6}
+.stat b{font-family:'Cairo';font-weight:900;font-size:30px;color:var(--navy);display:block;position:relative}
+.stat span{font-size:13px;color:var(--muted);font-weight:600}
+.dcard{padding:18px 20px;margin-bottom:16px}
+.dcard h3{font-size:15px;font-weight:800;color:var(--navy);margin-bottom:14px}
+.bar{display:flex;align-items:center;gap:10px;margin-bottom:9px}
+.bar .lbl{font-size:13px;font-weight:700;color:var(--navy);min-width:130px;display:flex;align-items:center;gap:6px}
+.bar .track{flex:1;height:22px;background:#eef2f7;border-radius:7px;overflow:hidden}
+.bar .fill{height:100%;border-radius:7px;display:flex;align-items:center;padding-inline-start:8px;color:#fff;font-size:11px;font-weight:800;transition:width .7s ease;min-width:24px}
+.bar .v{font-size:12.5px;font-weight:800;color:var(--muted);min-width:26px;text-align:end}
+
+/* ===== retention ===== */
+.rtbl{width:100%;border-collapse:collapse;overflow:hidden;border-radius:var(--r)}
+.rtbl th{background:var(--navy);color:#fff;padding:12px;font-size:13px;text-align:start}
+.rtbl td{padding:11px 12px;border-bottom:1px solid var(--line);font-size:13.5px}
+.rtbl tr:nth-child(even) td{background:#f6f9fc}
+.rtbl td:first-child{font-weight:800;color:var(--navy)}
+
+.toast{position:fixed;inset-block-end:24px;inset-inline-start:50%;transform:translateX(50%) translateY(80px);background:var(--navy);color:#fff;padding:12px 22px;border-radius:12px;font-weight:700;font-size:14px;box-shadow:var(--sh);z-index:80;opacity:0;transition:.3s;border-inline-start:4px solid var(--gold)}
+[dir=rtl] .toast{transform:translateX(-50%) translateY(80px)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+[dir=rtl] .toast.on{transform:translateX(50%) translateY(0)}
+
+.foot{text-align:center;padding:16px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);background:var(--card)}
+.foot b{color:var(--navy)}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- top -->
+  <header class="top">
+    <svg class="logo" viewBox="0 0 40 44"><path d="M20 1 38 11v22L20 43 2 33V11z" fill="#1F3A5F" stroke="#C9A227" stroke-width="2"/><path d="M20 9 30 15v14l-10 6-10-6V15z" fill="#2E6FB0"/><path d="M20 9 30 15 20 21 10 15z" fill="#C9A227"/></svg>
+    <div class="brand"><b>نظام الأرشفة الرقمية</b><span>Dr.Eng.Suhaila Mohieldin</span></div>
+    <div class="grow"></div>
+    <div class="kpis">
+      <div class="kpi"><b id="kTotal">0</b><span>وثيقة مؤرشفة</span></div>
+      <div class="kpi"><b id="kCats">0</b><span>فئة مستخدمة</span></div>
+      <div class="kpi"><b id="kDig">0%</b><span>نسبة الرقمنة</span></div>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- rail -->
+    <nav class="rail">
+      <div class="grp">سير العمل</div>
+      <button class="tab on" data-v="ingest"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0L8 8m4-4 4 4"/><path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>الإيداع والتصنيف</button>
+      <button class="tab" data-v="archive"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/></svg>الأرشيف<span class="cnt" id="cArch">0</span></button>
+      <button class="tab" data-v="search"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>البحث والاسترجاع</button>
+      <div class="grp">الإدارة</div>
+      <button class="tab" data-v="dash"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/></svg>لوحة المعلومات</button>
+      <button class="tab" data-v="ret"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>جدول الاستبقاء</button>
+      <div style="margin-top:auto;padding:10px 4px;display:flex;flex-direction:column;gap:7px">
+        <button class="btn ghost" id="btnExport" style="font-size:13px;justify-content:center">تصدير الفهرس</button>
+        <button class="btn ghost" id="btnImport" style="font-size:13px;justify-content:center">استيراد فهرس</button>
+        <input type="file" id="impFile" accept=".json" hidden>
+      </div>
+    </nav>
+
+    <!-- main -->
+    <main class="main">
+      <!-- INGEST -->
+      <section class="view on" id="v-ingest">
+        <div class="pageHead"><h2>الإيداع والتصنيف التلقائي</h2><p>أفلت الملفات لتُصنَّف آلياً وتُولَّد بياناتها الوصفية ومدة استبقائها — مع إمكانية تعديل الفئة يدوياً قبل الاعتماد.</p></div>
+        <div class="drop card" id="drop">
+          <svg class="gem" viewBox="0 0 40 44"><path d="M20 1 38 11v22L20 43 2 33V11z" fill="none" stroke="#C9A227" stroke-width="2"/><path d="M20 9 30 15v14l-10 6-10-6V15z" fill="#DCE8F5"/><path d="M20 9 30 15 20 21 10 15z" fill="#C9A227"/></svg>
+          <div class="big">أفلت الملفات هنا</div>
+          <div class="sub">أو اختر ملفات من جهازك — يدعم النظام مختلف الصيغ (PDF، Word، Excel، صور، نصوص…)</div>
+          <div class="row-actions">
+            <button class="btn" id="btnPick">اختيار ملفات</button>
+            <button class="btn gold" id="btnSample">تحميل عيّنة تجريبية</button>
+          </div>
+          <input type="file" id="fileInput" multiple hidden>
+        </div>
+
+        <div class="pending" id="pending">
+          <div class="pbar">
+            <h3>قيد المراجعة — <span id="pCount">0</span> ملف مصنّف</h3>
+            <div style="display:flex;gap:10px">
+              <button class="btn ghost" id="btnClear">إلغاء</button>
+              <button class="btn gold" id="btnCommit">اعتماد وأرشفة الكل</button>
+            </div>
+          </div>
+          <div id="precs"></div>
+        </div>
+      </section>
+
+      <!-- ARCHIVE -->
+      <section class="view" id="v-archive">
+        <div class="pageHead"><h2>الأرشيف</h2><p>الوثائق منظَّمة هرمياً: مجموعة ← سلسلة ← وثيقة. اختر فرعاً للتصفية، وانقر وثيقة لعرض بياناتها الوصفية.</p></div>
+        <div class="split">
+          <div class="card tree" id="tree"></div>
+          <div class="card" style="overflow:hidden">
+            <div style="overflow-x:auto"><table class="tbl" id="archTbl"></table></div>
+            <div class="empty" id="archEmpty">
+              <svg class="gem" viewBox="0 0 40 44"><path d="M20 1 38 11v22L20 43 2 33V11z" fill="none" stroke="#C9A227" stroke-width="2"/></svg>
+              لا توجد وثائق بعد. ابدأ من «الإيداع والتصنيف» أو حمّل العيّنة التجريبية.
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEARCH -->
+      <section class="view" id="v-search">
+        <div class="pageHead"><h2>البحث والاسترجاع</h2><p>ابحث بالاسم أو الكلمات المفتاحية أو رقم الوثيقة، وصفِّ النتائج حسب الفئة والنوع والحساسية.</p></div>
+        <div class="searchbar"><input type="text" id="q" placeholder="اكتب كلمة للبحث… مثل: عقد، فاتورة، تقرير، ARC-2026"></div>
+        <div class="filters">
+          <select id="fCat"><option value="">كل الفئات</option></select>
+          <select id="fType"><option value="">كل الأنواع</option></select>
+          <select id="fSens"><option value="">كل مستويات الحساسية</option><option value="0">عام</option><option value="1">داخلي</option><option value="2">حساس</option></select>
+        </div>
+        <div class="card" style="overflow:hidden"><div style="overflow-x:auto"><table class="tbl" id="srchTbl"></table></div>
+          <div class="empty" id="srchEmpty">اكتب في حقل البحث أعلاه لعرض النتائج.</div>
+        </div>
+      </section>
+
+      <!-- DASHBOARD -->
+      <section class="view" id="v-dash">
+        <div class="pageHead"><h2>لوحة المعلومات</h2><p>مؤشرات أداء الأرشيف الرقمي وتوزيع الوثائق حسب الفئة والنوع.</p></div>
+        <div class="stats" id="stats"></div>
+        <div class="card dcard"><h3>التوزيع حسب الفئة</h3><div id="byCat"></div></div>
+        <div class="card dcard"><h3>التوزيع حسب نوع الملف</h3><div id="byType"></div></div>
+      </section>
+
+      <!-- RETENTION -->
+      <section class="view" id="v-ret">
+        <div class="pageHead"><h2>جدول الاستبقاء والإتلاف</h2><p>المرجع الذي يَحكم مدة الاحتفاظ بكل فئة وإجراءها النهائي وسندها — يُطبَّق آلياً عند التصنيف.</p></div>
+        <div class="card" style="overflow:hidden"><div style="overflow-x:auto"><table class="rtbl" id="retTbl"></table></div></div>
+      </section>
+    </main>
+  </div>
+
+  <div class="foot">نظام أرشفة تعليمي — إعداد <b>د.م. سهيلة محيي الدين</b> · يعمل بالكامل داخل المتصفح دون خادم.</div>
+</div>
+
+<!-- drawer -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer">
+  <div class="dhead" style="position:relative">
+    <button class="x" id="dClose">×</button>
+    <div class="id" id="dId">—</div><h3 id="dTitle">—</h3>
+  </div>
+  <div class="dbody" id="dBody"></div>
+  <div class="dactions">
+    <button class="btn ghost" id="dDownload" style="flex:1;justify-content:center">تنزيل الأصل</button>
+    <button class="btn ghost" id="dDelete" style="flex:0 0 auto;color:var(--hot);border-color:#f0d4d8">حذف</button>
+  </div>
+</aside>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ نموذج الفئات وجدول الاستبقاء ============ */
+const CATS = [
+  {id:'contracts', name:'العقود والاتفاقيات', color:'#1F3A5F', group:'الشؤون القانونية والإدارية',
+   kw:['عقد','عقود','اتفاقية','اتفاق','ملحق','مذكرة تفاهم','تفاهم','contract','agreement','nda','mou'],
+   ret:'حفظ دائم', basis:'قانوني', sens:1},
+  {id:'finance', name:'السجلات المالية', color:'#2E7D54', group:'الشؤون المالية',
+   kw:['فاتورة','فواتير','مالي','مالية','ميزانية','موازنة','سند','صرف','قبض','إيصال','رواتب','راتب','كشف','invoice','receipt','payment','budget','finance','payroll'],
+   ret:'7–10 سنوات', basis:'قانوني', sens:1},
+  {id:'hr', name:'الموارد البشرية', color:'#7A4FB0', group:'الموارد البشرية',
+   kw:['موظف','موظفين','توظيف','سيرة','السيرة الذاتية','تعيين','إجازة','تقييم','أداء الموظف','hr','employee','resume','cv','recruitment','leave'],
+   ret:'مدة الخدمة + 5 سنوات', basis:'قانوني', sens:2},
+  {id:'minutes', name:'المحاضر والقرارات', color:'#B23A48', group:'الشؤون القانونية والإدارية',
+   kw:['محضر','محاضر','قرار','قرارات','اجتماع','توصية','مجلس','minutes','resolution','decision','meeting'],
+   ret:'حفظ دائم', basis:'تنظيمي', sens:1},
+  {id:'reports', name:'التقارير والدراسات', color:'#2E6FB0', group:'التقارير والوثائق الفنية',
+   kw:['تقرير','تقارير','دراسة','دراسات','تحليل','إحصاء','إحصائية','مؤشر','report','study','analysis','statistics'],
+   ret:'5 سنوات', basis:'إداري', sens:0},
+  {id:'correspondence', name:'المراسلات', color:'#C9882C', group:'الشؤون القانونية والإدارية',
+   kw:['رسالة','خطاب','مذكرة','تعميم','مكاتبة','بريد','letter','memo','email','circular','correspondence'],
+   ret:'1–2 سنة', basis:'إداري', sens:0},
+  {id:'technical', name:'الوثائق الفنية', color:'#0E7C86', group:'التقارير والوثائق الفنية',
+   kw:['مخطط','رسم','تصميم','مواصفة','كروكي','خريطة','رسومات','design','drawing','spec','blueprint','plan','map'],
+   ret:'حسب دورة حياة المشروع', basis:'فني', sens:1},
+  {id:'general', name:'عام / غير مصنّف', color:'#5A6470', group:'عام',
+   kw:[], ret:'1 سنة (مراجعة)', basis:'إداري', sens:0},
+];
+const catById = id => CATS.find(c=>c.id===id);
+
+/* أنواع الملفات حسب الامتداد */
+const TYPES = {
+  pdf:'PDF', doc:'مستند Word', docx:'مستند Word', rtf:'مستند نصي',
+  xls:'جدول بيانات', xlsx:'جدول بيانات', csv:'جدول بيانات',
+  ppt:'عرض تقديمي', pptx:'عرض تقديمي',
+  jpg:'صورة', jpeg:'صورة', png:'صورة', gif:'صورة', webp:'صورة', bmp:'صورة', tif:'صورة', tiff:'صورة',
+  txt:'نص', md:'نص', eml:'بريد إلكتروني', msg:'بريد إلكتروني',
+  zip:'أرشيف مضغوط', rar:'أرشيف مضغوط', dwg:'رسم هندسي'
+};
+const extOf = n => (n.split('.').pop()||'').toLowerCase();
+const typeOf = n => TYPES[extOf(n)] || 'أخرى';
+
+/* ============ محرك التصنيف الشفّاف ============ */
+function classify(name, text){
+  const hay = (name+' '+(text||'')).toLowerCase();
+  let best=null;
+  for(const c of CATS){
+    if(!c.kw.length) continue;
+    const hits=[]; 
+    for(const k of c.kw){ if(hay.includes(k.toLowerCase())) hits.push(k); }
+    if(hits.length){
+      const score=hits.length;
+      if(!best || score>best.score) best={cat:c, score, hits};
+    }
+  }
+  if(!best) return {catId:'general', confidence:35, matched:[]};
+  const conf=Math.min(96, 58 + best.score*14);
+  return {catId:best.cat.id, confidence:conf, matched:best.hits.slice(0,4)};
+}
+
+/* ============ التخزين (يعمل داخل التطبيق؛ والتصدير للحفظ المحلي) ============ */
+const KEY='archive:catalog';
+let MEM=null;
+async function loadCatalog(){
+  try{ if(window.storage){ const r=await window.storage.get(KEY); return r&&r.value?JSON.parse(r.value):[]; } }catch(e){}
+  return MEM||[];
+}
+async function saveCatalog(list){
+  MEM=list;
+  try{ if(window.storage){ await window.storage.set(KEY, JSON.stringify(list)); } }catch(e){}
+}
+
+/* ============ الحالة ============ */
+let CATALOG=[];
+let PENDING=[];          // {tmpId, name, ext, type, file, catId, confidence, matched, manual, textPreview}
+const FILES=new Map();   // id -> File (للتنزيل أثناء الجلسة)
+let treeFilter=null;     // {group} or {cat}
+
+/* ============ أدوات ============ */
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const esc=s=>(s||'').replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('on'),2200);}
+function fmtSize(b){ if(!b&&b!==0) return '—'; if(b<1024) return b+' ب'; if(b<1048576) return (b/1024).toFixed(1)+' ك.ب'; return (b/1048576).toFixed(2)+' م.ب'; }
+function today(){return new Date().toISOString().slice(0,10);}
+function newId(i){return 'ARC-'+new Date().getFullYear()+'-'+String(i).padStart(4,'0');}
+
+/* ============ الإيداع ============ */
+function fileBadge(ext){ const e=ext.toUpperCase().slice(0,4); return e||'?'; }
+
+function addPending(name, size, dateMod, file, text){
+  const r=classify(name, text);
+  const rec={ tmpId:'t'+Math.random().toString(36).slice(2), name, ext:extOf(name), type:typeOf(name),
+    size, dateMod:dateMod||today(), file:file||null, textPreview:(text||'').slice(0,160),
+    catId:r.catId, confidence:r.confidence, matched:r.matched, manual:false };
+  PENDING.push(rec);
+}
+function renderPending(){
+  const box=$('#precs'); box.innerHTML='';
+  $('#pending').classList.toggle('on', PENDING.length>0);
+  $('#pCount').textContent=PENDING.length;
+  PENDING.forEach((p,i)=>{
+    const c=catById(p.catId);
+    const opts=CATS.map(c2=>`<option value="${c2.id}" ${c2.id===p.catId?'selected':''}>${c2.name}</option>`).join('');
+    const kws=p.matched.map(k=>`<span class="chip kw">${esc(k)}</span>`).join('');
+    const el=document.createElement('div');
+    el.className='frec'; el.style.setProperty('--catc',c.color); el.style.animationDelay=(i*60)+'ms';
+    el.innerHTML=`
+      <div class="ficon">${fileBadge(p.ext)}</div>
+      <div class="fmeta">
+        <div class="fname">${esc(p.name)}</div>
+        <div class="fsub">
+          <span>${p.type}</span><span>·</span><span>${fmtSize(p.size)}</span>
+          ${p.manual?'<span class="chip man">معدّل يدوياً</span>':''}
+          ${kws?'<span>·</span>'+kws:'<span>·</span><span class="chip kw">بلا مطابقة — مبدئي</span>'}
+        </div>
+      </div>
+      <div class="fclass">
+        <div class="catpick"><span class="catdot" style="background:${c.color}"></span>
+          <select data-i="${i}">${opts}</select></div>
+        <div class="conf"><small>${p.confidence}%</small><div class="track"><div class="fill" style="width:0%"></div></div></div>
+        <div class="ret">الاستبقاء: <b>${c.ret}</b></div>
+      </div>`;
+    box.appendChild(el);
+    requestAnimationFrame(()=>{ el.querySelector('.fill').style.width=p.confidence+'%'; });
+  });
+  box.querySelectorAll('select[data-i]').forEach(s=>{
+    s.onchange=e=>{ const i=+e.target.dataset.i; PENDING[i].catId=e.target.value; PENDING[i].manual=true;
+      PENDING[i].confidence=100; renderPending(); };
+  });
+}
+function readAndAdd(file){
+  const txtLike=['txt','md','csv'].includes(extOf(file.name));
+  if(txtLike && file.size<200000){
+    const fr=new FileReader();
+    fr.onload=()=>{ addPending(file.name,file.size,new Date(file.lastModified).toISOString().slice(0,10),file,fr.result); renderPending(); };
+    fr.onerror=()=>{ addPending(file.name,file.size,today(),file,''); renderPending(); };
+    fr.readAsText(file);
+  }else{
+    addPending(file.name,file.size,new Date(file.lastModified).toISOString().slice(0,10),file,'');
+    renderPending();
+  }
+}
+function handleFiles(list){ [...list].forEach(readAndAdd); }
+
+const SAMPLE=[
+  'عقد إيجار مقر الشركة 2026.pdf','فاتورة مورد أجهزة طبية.xlsx','السيرة الذاتية - مهندس صيانة.docx',
+  'محضر اجتماع مجلس الإدارة - يناير.docx','تقرير الأداء الربعي Q1.pdf','تعميم إداري بشأن أوقات الدوام.pdf',
+  'مخطط الشبكة الكهربائية للمبنى.png','كشف رواتب الموظفين - مارس.xlsx','خطاب شكر لعميل مميز.docx',
+  'مذكرة تفاهم مع جامعة الشارقة.pdf','دراسة تحليل المخاطر التشغيلية.pdf','ملف بيانات 20260615.dat'
+];
+function loadSample(){
+  PENDING=[];
+  SAMPLE.forEach((n,i)=>addPending(n, 40000+i*9000, today(), null, ''));
+  renderPending();
+  toast('تم تحميل '+SAMPLE.length+' ملف عيّنة وتصنيفها');
+}
+
+async function commit(){
+  if(!PENDING.length) return;
+  let seq=CATALOG.length;
+  const stamp=today();
+  PENDING.forEach(p=>{
+    seq++; const id=newId(seq); const c=catById(p.catId);
+    const rec={ id, title:p.name.replace(/\.[^.]+$/,''), filename:p.name, ext:p.ext, type:p.type,
+      catId:p.catId, group:c.group, series:c.name, confidence:p.confidence, matched:p.matched, manual:p.manual,
+      size:p.size, dateMod:p.dateMod, dateArch:stamp, retention:c.ret, basis:c.basis, sens:c.sens,
+      textPreview:p.textPreview };
+    CATALOG.push(rec);
+    if(p.file) FILES.set(id, p.file);
+  });
+  await saveCatalog(CATALOG);
+  const n=PENDING.length; PENDING=[]; renderPending();
+  refreshAll();
+  toast('تمت أرشفة '+n+' وثيقة بنجاح');
+  go('archive');
+}
+
+/* ============ الأرشيف + الشجرة ============ */
+function buildTree(){
+  const tree=$('#tree'); 
+  if(!CATALOG.length){ tree.innerHTML='<h3>الهيكل الأرشيفي</h3><p style="color:var(--muted);font-size:13px;padding:4px">لا توجد وثائق.</p>'; return; }
+  const groups={};
+  CATALOG.forEach(r=>{ (groups[r.group]=groups[r.group]||{}); groups[r.group][r.series]=(groups[r.group][r.series]||0)+1; });
+  let html='<h3>الهيكل الأرشيفي</h3>';
+  const allOn=!treeFilter?'on':'';
+  html+=`<div class="tnode ${allOn}" data-all="1">📁 كل المجموعات <span class="n">${CATALOG.length}</span></div>`;
+  for(const g in groups){
+    const gcount=Object.values(groups[g]).reduce((a,b)=>a+b,0);
+    const gon=treeFilter&&treeFilter.group===g&&!treeFilter.cat?'on':'';
+    html+=`<div class="tnode ${gon}" data-group="${esc(g)}">🗂️ ${esc(g)} <span class="n">${gcount}</span></div><div class="tser">`;
+    for(const s in groups[g]){
+      const cat=CATS.find(c=>c.name===s);
+      const con=treeFilter&&treeFilter.cat===cat.id?'on':'';
+      html+=`<div class="tnode ${con}" data-cat="${cat.id}"><span class="catdot" style="background:${cat.color}"></span>${esc(s)} <span class="n">${groups[g][s]}</span></div>`;
+    }
+    html+='</div>';
+  }
+  tree.innerHTML=html;
+  tree.querySelectorAll('.tnode').forEach(n=>{
+    n.onclick=()=>{
+      if(n.dataset.all) treeFilter=null;
+      else if(n.dataset.group) treeFilter={group:n.dataset.group};
+      else if(n.dataset.cat) treeFilter={cat:n.dataset.cat};
+      buildTree(); renderArchive();
+    };
+  });
+}
+function filtered(){
+  if(!treeFilter) return CATALOG;
+  if(treeFilter.group) return CATALOG.filter(r=>r.group===treeFilter.group);
+  if(treeFilter.cat) return CATALOG.filter(r=>r.catId===treeFilter.cat);
+  return CATALOG;
+}
+function rowsHtml(list){
+  return `<thead><tr><th>المعرّف</th><th>العنوان</th><th>الفئة</th><th>النوع</th><th>الاستبقاء</th><th>الحساسية</th></tr></thead><tbody>`+
+    list.map(r=>{ const c=catById(r.catId);
+      return `<tr data-id="${r.id}"><td class="id">${r.id}</td>
+        <td>${esc(r.title)}</td>
+        <td><span class="catbadge" style="background:${c.color}22;color:${c.color}"><span class="catdot" style="background:${c.color}"></span>${c.name}</span></td>
+        <td>${r.type}</td><td>${r.retention}</td>
+        <td><span class="sens s${r.sens}">${['عام','داخلي','حساس'][r.sens]}</span></td></tr>`;
+    }).join('')+`</tbody>`;
+}
+function renderArchive(){
+  const list=filtered();
+  const tbl=$('#archTbl'), emp=$('#archEmpty');
+  if(!list.length){ tbl.innerHTML=''; emp.style.display='block'; return; }
+  emp.style.display='none'; tbl.innerHTML=rowsHtml(list);
+  tbl.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>openDrawer(tr.dataset.id));
+}
+
+/* ============ البحث ============ */
+function runSearch(){
+  const q=$('#q').value.trim().toLowerCase();
+  const fc=$('#fCat').value, ft=$('#fType').value, fs=$('#fSens').value;
+  const tbl=$('#srchTbl'), emp=$('#srchEmpty');
+  if(!q && !fc && !ft && !fs){ tbl.innerHTML=''; emp.style.display='block'; emp.textContent='اكتب في حقل البحث أو اختر مرشّحاً لعرض النتائج.'; return; }
+  let res=CATALOG.filter(r=>{
+    const blob=(r.title+' '+r.filename+' '+r.id+' '+r.series+' '+(r.matched||[]).join(' ')+' '+(r.textPreview||'')).toLowerCase();
+    return (!q||blob.includes(q)) && (!fc||r.catId===fc) && (!ft||r.type===ft) && (fs===''||String(r.sens)===fs);
+  });
+  if(!res.length){ tbl.innerHTML=''; emp.style.display='block'; emp.textContent='لا نتائج مطابقة. جرّب كلمة أعمّ أو أزل بعض المرشّحات.'; return; }
+  emp.style.display='none'; tbl.innerHTML=rowsHtml(res);
+  tbl.querySelectorAll('tr[data-id]').forEach(tr=>tr.onclick=()=>openDrawer(tr.dataset.id));
+}
+
+/* ============ الدرج (البيانات الوصفية) ============ */
+function openDrawer(id){
+  const r=CATALOG.find(x=>x.id===id); if(!r) return; const c=catById(r.catId);
+  $('#dId').textContent=r.id; $('#dTitle').textContent=r.title;
+  const f=(k,v)=>`<div class="field"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+  $('#dBody').innerHTML=
+    `<div class="dsec">التصنيف والاستبقاء</div>`+
+    f('الفئة', `<span class="catbadge" style="background:${c.color}22;color:${c.color}"><span class="catdot" style="background:${c.color}"></span>${c.name}</span>`)+
+    f('ثقة التصنيف', r.confidence+'%'+(r.manual?' (معدّل يدوياً)':''))+
+    (r.matched&&r.matched.length?f('كلمات مطابقة', r.matched.map(esc).join('، ')):'')+
+    f('مدة الاستبقاء', r.retention)+ f('السند', r.basis)+
+    f('مستوى الحساسية', `<span class="sens s${r.sens}">${['عام','داخلي','حساس'][r.sens]}</span>`)+
+    `<div class="dsec">البيانات الوصفية (Dublin Core)</div>`+
+    f('العنوان (Title)', esc(r.title))+ f('النوع (Type)', r.type)+ f('الصيغة (Format)', '.'+r.ext)+
+    f('التاريخ (Date)', r.dateMod)+ f('المعرّف (Identifier)', r.id)+
+    f('المجموعة (Group)', esc(r.group))+ f('السلسلة (Series)', esc(r.series))+
+    `<div class="dsec">معلومات الملف</div>`+
+    f('اسم الملف', esc(r.filename))+ f('الحجم', fmtSize(r.size))+ f('تاريخ الأرشفة', r.dateArch)+
+    (r.textPreview?`<div class="dsec">مقتطف</div><div style="font-size:13px;color:var(--muted);background:#f6f9fc;padding:10px;border-radius:9px">${esc(r.textPreview)}…</div>`:'');
+  const dl=$('#dDownload'); dl.style.display=FILES.has(id)?'inline-flex':'none';
+  dl.onclick=()=>{ const file=FILES.get(id); if(!file)return; const u=URL.createObjectURL(file); const a=document.createElement('a'); a.href=u; a.download=file.name; a.click(); URL.revokeObjectURL(u); };
+  $('#dDelete').onclick=async()=>{ CATALOG=CATALOG.filter(x=>x.id!==id); FILES.delete(id); await saveCatalog(CATALOG); closeDrawer(); refreshAll(); toast('تم حذف الوثيقة'); };
+  $('#scrim').classList.add('on'); $('#drawer').classList.add('on');
+}
+function closeDrawer(){ $('#scrim').classList.remove('on'); $('#drawer').classList.remove('on'); }
+
+/* ============ اللوحة ============ */
+function renderDash(){
+  const total=CATALOG.length;
+  const cats=new Set(CATALOG.map(r=>r.catId)).size;
+  const digital=total; // الكل رقمي في هذا النظام
+  const perm=CATALOG.filter(r=>r.retention.includes('دائم')).length;
+  $('#stats').innerHTML=
+    `<div class="stat"><b>${total}</b><span>إجمالي الوثائق</span></div>
+     <div class="stat"><b>${cats}</b><span>فئة مستخدمة</span></div>
+     <div class="stat"><b>${total?Math.round(digital/total*100):0}%</b><span>نسبة الرقمنة</span></div>
+     <div class="stat"><b>${perm}</b><span>وثائق حفظ دائم</span></div>`;
+  // by cat
+  const cc={}; CATALOG.forEach(r=>cc[r.catId]=(cc[r.catId]||0)+1);
+  const maxC=Math.max(1,...Object.values(cc));
+  $('#byCat').innerHTML=CATS.filter(c=>cc[c.id]).sort((a,b)=>cc[b.id]-cc[a.id]).map(c=>{
+    const v=cc[c.id], w=Math.round(v/maxC*100);
+    return `<div class="bar"><div class="lbl"><span class="catdot" style="background:${c.color}"></span>${c.name}</div>
+      <div class="track"><div class="fill" style="width:0%;background:${c.color}" data-w="${w}">${v}</div></div><div class="v">${v}</div></div>`;
+  }).join('')||'<p style="color:var(--muted)">لا بيانات بعد.</p>';
+  // by type
+  const tc={}; CATALOG.forEach(r=>tc[r.type]=(tc[r.type]||0)+1);
+  const maxT=Math.max(1,...Object.values(tc));
+  $('#byType').innerHTML=Object.keys(tc).sort((a,b)=>tc[b]-tc[a]).map(t=>{
+    const v=tc[t], w=Math.round(v/maxT*100);
+    return `<div class="bar"><div class="lbl">${t}</div><div class="track"><div class="fill" style="width:0%;background:var(--blue)" data-w="${w}">${v}</div></div><div class="v">${v}</div></div>`;
+  }).join('')||'<p style="color:var(--muted)">لا بيانات بعد.</p>';
+  requestAnimationFrame(()=>$$('#byCat .fill,#byType .fill').forEach(f=>f.style.width=f.dataset.w+'%'));
+}
+
+/* ============ جدول الاستبقاء ============ */
+function renderRet(){
+  $('#retTbl').innerHTML=`<thead><tr><th>الفئة</th><th>مدة الاحتفاظ</th><th>الإجراء النهائي</th><th>السند</th><th>الحساسية الافتراضية</th></tr></thead><tbody>`+
+    CATS.map(c=>{ const action=c.ret.includes('دائم')?'حفظ دائم':'إتلاف آمن بعد المدة';
+      return `<tr><td><span class="catdot" style="background:${c.color};display:inline-block;margin-inline-end:6px"></span>${c.name}</td>
+        <td>${c.ret}</td><td>${action}</td><td>${c.basis}</td>
+        <td><span class="sens s${c.sens}">${['عام','داخلي','حساس'][c.sens]}</span></td></tr>`;
+    }).join('')+`</tbody>`;
+}
+
+/* ============ تصدير / استيراد ============ */
+function exportCatalog(){
+  if(!CATALOG.length) return toast('لا توجد وثائق للتصدير');
+  const blob=new Blob([JSON.stringify({app:'gemstone-archive',exported:today(),catalog:CATALOG},null,2)],{type:'application/json'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='فهرس-الأرشيف-'+today()+'.json'; a.click();
+  toast('تم تصدير الفهرس ('+CATALOG.length+' وثيقة)');
+}
+function importCatalog(file){
+  const fr=new FileReader();
+  fr.onload=async()=>{ try{ const d=JSON.parse(fr.result); const list=Array.isArray(d)?d:d.catalog;
+    if(!Array.isArray(list)) throw 0; CATALOG=list; await saveCatalog(CATALOG); refreshAll();
+    toast('تم استيراد '+list.length+' وثيقة'); go('archive');
+  }catch(e){ toast('تعذّر قراءة الملف — تأكد أنه فهرس صالح'); } };
+  fr.readAsText(file);
+}
+
+/* ============ تحديث شامل + تبويبات ============ */
+function refreshAll(){
+  $('#kTotal').textContent=CATALOG.length;
+  $('#kCats').textContent=new Set(CATALOG.map(r=>r.catId)).size;
+  $('#kDig').textContent=(CATALOG.length?100:0)+'%';
+  $('#cArch').textContent=CATALOG.length;
+  // populate filter selects once
+  const fcat=$('#fCat'); if(fcat.options.length<=1) CATS.forEach(c=>fcat.add(new Option(c.name,c.id)));
+  const ftype=$('#fType'); const types=[...new Set(Object.values(TYPES))];
+  if(ftype.options.length<=1) types.forEach(t=>ftype.add(new Option(t,t)));
+  buildTree(); renderArchive(); renderDash(); renderRet(); runSearch();
+}
+function go(v){
+  $$('.tab').forEach(t=>t.classList.toggle('on',t.dataset.v===v));
+  $$('.view').forEach(s=>s.classList.toggle('on',s.id==='v-'+v));
+}
+
+/* ============ ربط الأحداث ============ */
+$$('.tab').forEach(t=>t.onclick=()=>go(t.dataset.v));
+$('#btnPick').onclick=()=>$('#fileInput').click();
+$('#fileInput').onchange=e=>{ handleFiles(e.target.files); e.target.value=''; };
+$('#btnSample').onclick=loadSample;
+$('#btnClear').onclick=()=>{ PENDING=[]; renderPending(); };
+$('#btnCommit').onclick=commit;
+$('#dClose').onclick=closeDrawer; $('#scrim').onclick=closeDrawer;
+$('#q').oninput=runSearch; $('#fCat').onchange=runSearch; $('#fType').onchange=runSearch; $('#fSens').onchange=runSearch;
+$('#btnExport').onclick=exportCatalog;
+$('#btnImport').onclick=()=>$('#impFile').click();
+$('#impFile').onchange=e=>{ if(e.target.files[0]) importCatalog(e.target.files[0]); e.target.value=''; };
+
+const drop=$('#drop');
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot');}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot');}));
+drop.addEventListener('drop',e=>{ if(e.dataTransfer.files.length) handleFiles(e.dataTransfer.files); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDrawer(); });
+
+/* ============ إقلاع ============ */
+(async()=>{ CATALOG=await loadCatalog(); refreshAll(); })();
+</script>
+</body>
+</html>
